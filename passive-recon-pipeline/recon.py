@@ -12,7 +12,7 @@ from modules.crtsh import get_subdomains
 from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
 from report import generate_report, save_report
-
+from modules.dns_enum import get_dns_records
 
 def main():
     parser = argparse.ArgumentParser(
@@ -66,9 +66,27 @@ def main():
 
     print()
 
+    # --- DNS Records ---
+    print(f"[*] Enumerating DNS records for {args.domain}...")
+    dns_result = get_dns_records(args.domain)
+
+    if dns_result["error"]:
+        print(f"[!] Error: {dns_result['error']}")
+    else:
+        print(f"[+] MX records: {len(dns_result['mx'])}")
+        for mx in dns_result["mx"]:
+            print(f"    {mx}")
+        print(f"[+] NS records: {len(dns_result['ns'])}")
+        for ns in dns_result["ns"]:
+            print(f"    {ns}")
+        print(f"[+] SPF record found: {dns_result['spf_found']}")
+        print(f"[+] DMARC record found: {dns_result['dmarc_found']}")
+
+    print()
+
     # --- Report Generation ---
     print("[*] Generating consolidated report...")
-    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result)
+    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result)
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")
 

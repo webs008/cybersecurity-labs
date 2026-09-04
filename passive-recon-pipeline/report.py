@@ -8,7 +8,7 @@ consolidated markdown report to disk.
 from datetime import datetime
 
 
-def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_result: dict) -> str:
+def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_result: dict, dns_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
     each recon module.
@@ -76,6 +76,27 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
                       f"({ssl_result['days_remaining']} days remaining)")
     lines.append("")
 
+    # --- DNS section ---
+    lines.append("## DNS Records")
+    lines.append("")
+    if dns_result.get("error"):
+        lines.append(f"**Error:** {dns_result['error']}")
+    else:
+        lines.append(f"- **SPF record found:** {dns_result['spf_found']}")
+        lines.append(f"- **DMARC record found:** {dns_result['dmarc_found']}")
+        lines.append("")
+        lines.append("**Mail servers (MX):**")
+        for mx in dns_result["mx"]:
+            lines.append(f"- {mx}")
+        lines.append("")
+        lines.append("**Nameservers (NS):**")
+        for ns in dns_result["ns"]:
+            lines.append(f"- {ns}")
+        lines.append("")
+        lines.append("**TXT records:**")
+        for txt in dns_result["txt"]:
+            lines.append(f"- `{txt}`")
+    lines.append("")
     return "\n".join(lines)
 
 
