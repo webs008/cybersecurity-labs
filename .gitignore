@@ -1,3 +1,5 @@
 passive-recon-pipeline/venv/
 __pycache__/
 *.pyc
+passive-recon-pipeline/.env
+passive-recon-pipeline/recon_report_*.md
