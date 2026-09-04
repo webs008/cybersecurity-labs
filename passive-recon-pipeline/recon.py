@@ -2,7 +2,8 @@
 recon.py
 --------
 CLI entry point for the passive recon pipeline.
-Currently wired to: crt.sh subdomain enumeration, Wayback Machine archived URLs, SSL certificate check.
+Runs: crt.sh subdomain enumeration, Wayback Machine archived URLs,
+SSL certificate check, then generates a consolidated markdown report.
 """
 
 import argparse
@@ -10,6 +11,7 @@ import argparse
 from modules.crtsh import get_subdomains
 from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
+from report import generate_report, save_report
 
 
 def main():
@@ -61,6 +63,14 @@ def main():
         print(f"[+] Issued to: {ssl_result['issued_to']}")
         print(f"    Issued by: {ssl_result['issued_by']}")
         print(f"    Expires: {ssl_result['expires']} ({ssl_result['days_remaining']} days remaining)")
+
+    print()
+
+    # --- Report Generation ---
+    print("[*] Generating consolidated report...")
+    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result)
+    filepath = save_report(args.domain, report_text)
+    print(f"[+] Report saved to: {filepath}")
 
 
 if __name__ == "__main__":
