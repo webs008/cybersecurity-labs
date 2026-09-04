@@ -24,7 +24,12 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
     lines.append("## Executive Summary")
     lines.append("")
     lines.append(f"- Subdomains discovered: {crtsh_result.get('count', 0)}")
-    lines.append(f"- Archived URLs found: {wayback_result.get('count', 0)}")
+
+    if wayback_result.get("error"):
+        lines.append("- Archived URLs: lookup failed (see details below)")
+    else:
+        lines.append(f"- Archived URLs found: {wayback_result.get('count', 0)}")
+
     if ssl_result.get("error"):
         lines.append("- SSL certificate: could not be retrieved")
     else:
