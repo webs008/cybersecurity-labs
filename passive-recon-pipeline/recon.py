@@ -2,13 +2,14 @@
 recon.py
 --------
 CLI entry point for the passive recon pipeline.
-Currently wired to: crt.sh subdomain enumeration, Wayback Machine archived URLs.
+Currently wired to: crt.sh subdomain enumeration, Wayback Machine archived URLs, SSL certificate check.
 """
 
 import argparse
 
 from modules.crtsh import get_subdomains
 from modules.wayback import get_archived_urls
+from modules.ssl_check import check_ssl
 
 
 def main():
@@ -33,7 +34,7 @@ def main():
         for sub in crtsh_result["subdomains"]:
             print(f"    {sub}")
 
-    print()  # blank line between sections for readability
+    print()
 
     # --- Wayback Machine ---
     print(f"[*] Running Wayback Machine lookup for {args.domain}...")
@@ -43,10 +44,23 @@ def main():
         print(f"[!] Error: {wayback_result['error']}")
     else:
         print(f"[+] Found {wayback_result['count']} archived URLs:")
-        for u in wayback_result["urls"][:20]:  # show first 20 only, can be huge
+        for u in wayback_result["urls"][:20]:
             print(f"    {u}")
         if wayback_result["count"] > 20:
             print(f"    ... and {wayback_result['count'] - 20} more")
+
+    print()
+
+    # --- SSL/TLS Certificate ---
+    print(f"[*] Checking SSL certificate for {args.domain}...")
+    ssl_result = check_ssl(args.domain)
+
+    if ssl_result["error"]:
+        print(f"[!] Error: {ssl_result['error']}")
+    else:
+        print(f"[+] Issued to: {ssl_result['issued_to']}")
+        print(f"    Issued by: {ssl_result['issued_by']}")
+        print(f"    Expires: {ssl_result['expires']} ({ssl_result['days_remaining']} days remaining)")
 
 
 if __name__ == "__main__":
