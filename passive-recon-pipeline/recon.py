@@ -2,12 +2,13 @@
 recon.py
 --------
 CLI entry point for the passive recon pipeline.
-Currently wired to: crt.sh subdomain enumeration.
+Currently wired to: crt.sh subdomain enumeration, Wayback Machine archived URLs.
 """
 
 import argparse
 
 from modules.crtsh import get_subdomains
+from modules.wayback import get_archived_urls
 
 
 def main():
@@ -21,15 +22,31 @@ def main():
     )
     args = parser.parse_args()
 
+    # --- crt.sh ---
     print(f"[*] Running crt.sh subdomain lookup for {args.domain}...")
-    result = get_subdomains(args.domain)
+    crtsh_result = get_subdomains(args.domain)
 
-    if result["error"]:
-        print(f"[!] Error: {result['error']}")
+    if crtsh_result["error"]:
+        print(f"[!] Error: {crtsh_result['error']}")
     else:
-        print(f"[+] Found {result['count']} subdomains:")
-        for sub in result["subdomains"]:
+        print(f"[+] Found {crtsh_result['count']} subdomains:")
+        for sub in crtsh_result["subdomains"]:
             print(f"    {sub}")
+
+    print()  # blank line between sections for readability
+
+    # --- Wayback Machine ---
+    print(f"[*] Running Wayback Machine lookup for {args.domain}...")
+    wayback_result = get_archived_urls(args.domain)
+
+    if wayback_result["error"]:
+        print(f"[!] Error: {wayback_result['error']}")
+    else:
+        print(f"[+] Found {wayback_result['count']} archived URLs:")
+        for u in wayback_result["urls"][:20]:  # show first 20 only, can be huge
+            print(f"    {u}")
+        if wayback_result["count"] > 20:
+            print(f"    ... and {wayback_result['count'] - 20} more")
 
 
 if __name__ == "__main__":
