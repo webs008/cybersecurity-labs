@@ -13,6 +13,7 @@ from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
 from report import generate_report, save_report
 from modules.dns_enum import get_dns_records
+from modules.whois_lookup import get_whois_info
 
 def main():
     parser = argparse.ArgumentParser(
@@ -84,9 +85,22 @@ def main():
 
     print()
 
+    # --- WHOIS ---
+    print(f"[*] Running WHOIS lookup for {args.domain}...")
+    whois_result = get_whois_info(args.domain)
+
+    if whois_result["error"]:
+        print(f"[!] Error: {whois_result['error']}")
+    else:
+        print(f"[+] Registrar: {whois_result['registrar']}")
+        print(f"    Created: {whois_result['creation_date']}")
+        print(f"    Expires: {whois_result['expiration_date']}")
+        print(f"    Nameservers: {', '.join(whois_result['name_servers'])}")
+    print()
+
     # --- Report Generation ---
     print("[*] Generating consolidated report...")
-    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result)
+    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result, whois_result)
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")
 

@@ -8,7 +8,8 @@ consolidated markdown report to disk.
 from datetime import datetime
 
 
-def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_result: dict, dns_result: dict) -> str:
+def generate_report(domain: str, crtsh_result: dict, wayback_result: dict,
+                     ssl_result: dict, dns_result: dict, whois_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
     each recon module.
@@ -35,6 +36,17 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
     else:
         lines.append(f"- SSL certificate expires: {ssl_result.get('expires')} "
                       f"({ssl_result.get('days_remaining')} days remaining)")
+
+    if dns_result.get("error"):
+        lines.append("- DNS records: lookup failed")
+    else:
+        lines.append(f"- SPF/DMARC configured: {dns_result['spf_found']} / {dns_result['dmarc_found']}")
+
+    if whois_result.get("error"):
+        lines.append("- WHOIS: lookup failed")
+    else:
+        lines.append(f"- Domain registered via: {whois_result['registrar']}")
+
     lines.append("")
 
     # --- crt.sh section ---
@@ -97,6 +109,19 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
         for txt in dns_result["txt"]:
             lines.append(f"- `{txt}`")
     lines.append("")
+
+    # --- WHOIS section ---
+    lines.append("## WHOIS Registration")
+    lines.append("")
+    if whois_result.get("error"):
+        lines.append(f"**Error:** {whois_result['error']}")
+    else:
+        lines.append(f"- **Registrar:** {whois_result['registrar']}")
+        lines.append(f"- **Created:** {whois_result['creation_date']}")
+        lines.append(f"- **Expires:** {whois_result['expiration_date']}")
+        lines.append(f"- **Nameservers:** {', '.join(whois_result['name_servers'])}")
+    lines.append("")
+
     return "\n".join(lines)
 
 
