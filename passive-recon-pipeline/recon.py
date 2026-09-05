@@ -14,6 +14,8 @@ from modules.ssl_check import check_ssl
 from report import generate_report, save_report
 from modules.dns_enum import get_dns_records
 from modules.whois_lookup import get_whois_info
+from modules.httpx_probe import probe_hosts
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -36,6 +38,22 @@ def main():
         print(f"[+] Found {crtsh_result['count']} subdomains:")
         for sub in crtsh_result["subdomains"]:
             print(f"    {sub}")
+
+    print()
+
+    # --- httpx (live host probing) ---
+    print(f"[*] Probing discovered subdomains for live hosts...")
+    if crtsh_result["error"] or not crtsh_result["subdomains"]:
+        httpx_result = {"probed": 0, "live": [], "error": "No subdomains available to probe."}
+        print(f"[!] Skipped: no subdomains to probe.")
+    else:
+        httpx_result = probe_hosts(crtsh_result["subdomains"])
+        if httpx_result["error"]:
+            print(f"[!] Error: {httpx_result['error']}")
+        else:
+            print(f"[+] {len(httpx_result['live'])} of {httpx_result['probed']} hosts are live:")
+            for host in httpx_result["live"]:
+                print(f"    {host['url']} [{host['status_code']}] {host['title']}")
 
     print()
 
@@ -100,7 +118,7 @@ def main():
 
     # --- Report Generation ---
     print("[*] Generating consolidated report...")
-    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result, whois_result)
+    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result, whois_result, httpx_result)
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")
 

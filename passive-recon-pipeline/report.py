@@ -8,8 +8,8 @@ consolidated markdown report to disk.
 from datetime import datetime
 
 
-def generate_report(domain: str, crtsh_result: dict, wayback_result: dict,
-                     ssl_result: dict, dns_result: dict, whois_result: dict) -> str:
+def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_result: dict,
+                     dns_result: dict, whois_result: dict, httpx_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
     each recon module.
@@ -25,6 +25,10 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict,
     lines.append("## Executive Summary")
     lines.append("")
     lines.append(f"- Subdomains discovered: {crtsh_result.get('count', 0)}")
+    if httpx_result.get("error"):
+        lines.append("- Live host probing: skipped or failed")
+    else:
+        lines.append(f"- Live hosts confirmed: {len(httpx_result.get('live', []))} of {httpx_result.get('probed', 0)}")
 
     if wayback_result.get("error"):
         lines.append("- Archived URLs: lookup failed (see details below)")
@@ -59,6 +63,22 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict,
         lines.append("")
         for sub in crtsh_result["subdomains"]:
             lines.append(f"- {sub}")
+    lines.append("")
+
+    # --- httpx section ---
+    lines.append("## Live Host Probing (httpx)")
+    lines.append("")
+    if httpx_result.get("error"):
+        lines.append(f"**Note:** {httpx_result['error']}")
+    else:
+        lines.append(f"Probed **{httpx_result['probed']}** discovered subdomains — "
+                      f"**{len(httpx_result['live'])}** responded as live:")
+        lines.append("")
+        lines.append("| URL | Status | Title | Server |")
+        lines.append("|---|---|---|---|")
+        for host in httpx_result["live"]:
+            title = (host.get("title") or "").replace("|", "-")  # avoid breaking the markdown table
+            lines.append(f"| {host['url']} | {host['status_code']} | {title} | {host.get('webserver', '')} |")
     lines.append("")
 
     # --- Wayback section ---
