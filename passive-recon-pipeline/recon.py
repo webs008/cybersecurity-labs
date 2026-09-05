@@ -2,19 +2,20 @@
 recon.py
 --------
 CLI entry point for the passive recon pipeline.
-Runs: crt.sh subdomain enumeration, Wayback Machine archived URLs,
-SSL certificate check, then generates a consolidated markdown report.
+Runs: crt.sh subdomain enumeration, httpx live-host probing,
+Wayback Machine archived URLs, SSL certificate check, DNS enumeration,
+WHOIS lookup, then generates a consolidated markdown report.
 """
 
 import argparse
 
 from modules.crtsh import get_subdomains
+from modules.httpx_probe import probe_hosts
 from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
-from report import generate_report, save_report
 from modules.dns_enum import get_dns_records
 from modules.whois_lookup import get_whois_info
-from modules.httpx_probe import probe_hosts
+from report import generate_report, save_report
 
 
 def main():
@@ -42,10 +43,10 @@ def main():
     print()
 
     # --- httpx (live host probing) ---
-    print(f"[*] Probing discovered subdomains for live hosts...")
+    print("[*] Probing discovered subdomains for live hosts...")
     if crtsh_result["error"] or not crtsh_result["subdomains"]:
         httpx_result = {"probed": 0, "live": [], "error": "No subdomains available to probe."}
-        print(f"[!] Skipped: no subdomains to probe.")
+        print("[!] Skipped: no subdomains to probe.")
     else:
         httpx_result = probe_hosts(crtsh_result["subdomains"])
         if httpx_result["error"]:
@@ -53,7 +54,8 @@ def main():
         else:
             print(f"[+] {len(httpx_result['live'])} of {httpx_result['probed']} hosts are live:")
             for host in httpx_result["live"]:
-                print(f"    {host['url']} [{host['status_code']}] {host['title']}")
+                tech = ", ".join(host.get("tech", [])) or "none detected"
+                print(f"    {host['url']} [{host['status_code']}] {host['title']} — Tech: {tech}")
 
     print()
 
@@ -114,11 +116,15 @@ def main():
         print(f"    Created: {whois_result['creation_date']}")
         print(f"    Expires: {whois_result['expiration_date']}")
         print(f"    Nameservers: {', '.join(whois_result['name_servers'])}")
+
     print()
 
     # --- Report Generation ---
     print("[*] Generating consolidated report...")
-    report_text = generate_report(args.domain, crtsh_result, wayback_result, ssl_result, dns_result, whois_result, httpx_result)
+    report_text = generate_report(
+        args.domain, crtsh_result, wayback_result, ssl_result,
+        dns_result, whois_result, httpx_result
+    )
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")
 

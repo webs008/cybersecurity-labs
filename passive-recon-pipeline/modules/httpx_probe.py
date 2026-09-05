@@ -3,7 +3,7 @@ httpx_probe.py
 --------------
 Wraps ProjectDiscovery's httpx CLI tool to probe a list of hosts
 and determine which are actually live, along with basic HTTP info
-(status code, title, technologies where detected).
+(status code, title, technologies detected, CDN detection).
 
 Requires httpx to be installed and on PATH:
     go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
@@ -25,17 +25,15 @@ def probe_hosts(hosts: list) -> dict:
             "error": "No hosts provided to probe.",
         }
 
-    # httpx reads hosts from stdin, one per line, and can output
-    # structured JSON with -json for easy parsing.
     input_data = "\n".join(hosts)
 
     try:
         result = subprocess.run(
-            ["httpx", "-silent", "-json", "-timeout", "10"],
+            ["httpx", "-silent", "-json", "-timeout", "10", "-tech-detect", "-cdn"],
             input=input_data,
             capture_output=True,
             text=True,
-            timeout=120,  # overall safety net for the whole batch
+            timeout=120,
         )
     except FileNotFoundError:
         return {
@@ -51,7 +49,6 @@ def probe_hosts(hosts: list) -> dict:
         }
 
     live_hosts = []
-    # httpx -json outputs one JSON object per line, one per live host
     for line in result.stdout.strip().split("\n"):
         if not line:
             continue
@@ -62,9 +59,11 @@ def probe_hosts(hosts: list) -> dict:
                 "status_code": entry.get("status_code"),
                 "title": entry.get("title"),
                 "webserver": entry.get("webserver"),
+                "tech": entry.get("tech", []),
+                "cdn_name": entry.get("cdn_name"),
             })
         except json.JSONDecodeError:
-            continue  # skip any malformed line rather than crashing the batch
+            continue
 
     return {
         "probed": len(hosts),

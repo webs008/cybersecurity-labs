@@ -25,6 +25,7 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
     lines.append("## Executive Summary")
     lines.append("")
     lines.append(f"- Subdomains discovered: {crtsh_result.get('count', 0)}")
+
     if httpx_result.get("error"):
         lines.append("- Live host probing: skipped or failed")
     else:
@@ -74,11 +75,12 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
         lines.append(f"Probed **{httpx_result['probed']}** discovered subdomains — "
                       f"**{len(httpx_result['live'])}** responded as live:")
         lines.append("")
-        lines.append("| URL | Status | Title | Server |")
-        lines.append("|---|---|---|---|")
+        lines.append("| URL | Status | Title | Server | Technologies |")
+        lines.append("|---|---|---|---|---|")
         for host in httpx_result["live"]:
-            title = (host.get("title") or "").replace("|", "-")  # avoid breaking the markdown table
-            lines.append(f"| {host['url']} | {host['status_code']} | {title} | {host.get('webserver', '')} |")
+            title = (host.get("title") or "").replace("|", "-")
+            tech = ", ".join(host.get("tech", [])) or "-"
+            lines.append(f"| {host['url']} | {host['status_code']} | {title} | {host.get('webserver', '')} | {tech} |")
     lines.append("")
 
     # --- Wayback section ---
