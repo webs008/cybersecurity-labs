@@ -16,6 +16,7 @@ from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
 from modules.dns_enum import get_dns_records
 from modules.whois_lookup import get_whois_info
+from modules.virustotal_lookup import check_domain
 from report import generate_report, save_report
 
 
@@ -136,6 +137,18 @@ def main():
         print(f"    Created: {whois_result['creation_date']}")
         print(f"    Expires: {whois_result['expiration_date']}")
         print(f"    Nameservers: {', '.join(whois_result['name_servers'])}")
+    print()
+
+    # --- VirusTotal ---
+    print(f"[*] Checking VirusTotal reputation for {args.domain}...")
+    vt_result = check_domain(args.domain)
+
+    if vt_result["error"]:
+        print(f"[!] Error: {vt_result['error']}")
+    else:
+        print(f"[+] Malicious: {vt_result['malicious']}, Suspicious: {vt_result['suspicious']}, "
+              f"Harmless: {vt_result['harmless']}")
+
 
     print()
 
@@ -143,7 +156,7 @@ def main():
     print("[*] Generating consolidated report...")
     report_text = generate_report(
         args.domain, crtsh_result, subfinder_result, combined_subdomains,
-        wayback_result, ssl_result, dns_result, whois_result, httpx_result
+        wayback_result, ssl_result, dns_result, whois_result, httpx_result, vt_result
     )
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")

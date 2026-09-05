@@ -10,7 +10,7 @@ from datetime import datetime
 
 def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
                      combined_subdomains: list, wayback_result: dict, ssl_result: dict,
-                     dns_result: dict, whois_result: dict, httpx_result: dict) -> str:
+                     dns_result: dict, whois_result: dict, httpx_result: dict, vt_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
     each recon module.
@@ -54,6 +54,12 @@ def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
         lines.append("- WHOIS: lookup failed")
     else:
         lines.append(f"- Domain registered via: {whois_result['registrar']}")
+
+    if vt_result.get("error"):
+        lines.append("- VirusTotal reputation: lookup failed")
+    else:
+        lines.append(f"- VirusTotal: {vt_result['malicious']} malicious / "
+                      f"{vt_result['suspicious']} suspicious / {vt_result['harmless']} harmless votes")
 
     lines.append("")
 
@@ -142,6 +148,18 @@ def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
         lines.append(f"- **Created:** {whois_result['creation_date']}")
         lines.append(f"- **Expires:** {whois_result['expiration_date']}")
         lines.append(f"- **Nameservers:** {', '.join(whois_result['name_servers'])}")
+    lines.append("")
+
+    # --- VirusTotal section ---
+    lines.append("## VirusTotal Reputation")
+    lines.append("")
+    if vt_result.get("error"):
+        lines.append(f"**Error:** {vt_result['error']}")
+    else:
+        lines.append(f"- **Malicious:** {vt_result['malicious']}")
+        lines.append(f"- **Suspicious:** {vt_result['suspicious']}")
+        lines.append(f"- **Harmless:** {vt_result['harmless']}")
+        lines.append(f"- **Reputation score:** {vt_result['reputation']}")
     lines.append("")
 
     return "\n".join(lines)
