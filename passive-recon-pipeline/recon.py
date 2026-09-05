@@ -2,14 +2,15 @@
 recon.py
 --------
 CLI entry point for the passive recon pipeline.
-Runs: crt.sh subdomain enumeration, httpx live-host probing,
-Wayback Machine archived URLs, SSL certificate check, DNS enumeration,
-WHOIS lookup, then generates a consolidated markdown report.
+Runs: crt.sh + Subfinder subdomain enumeration (merged), httpx live-host
+probing, Wayback Machine archived URLs, SSL certificate check, DNS
+enumeration, WHOIS lookup, then generates a consolidated markdown report.
 """
 
 import argparse
 
 from modules.crtsh import get_subdomains
+from modules.subfinder_lookup import find_subdomains
 from modules.httpx_probe import probe_hosts
 from modules.wayback import get_archived_urls
 from modules.ssl_check import check_ssl
@@ -36,19 +37,38 @@ def main():
     if crtsh_result["error"]:
         print(f"[!] Error: {crtsh_result['error']}")
     else:
-        print(f"[+] Found {crtsh_result['count']} subdomains:")
-        for sub in crtsh_result["subdomains"]:
-            print(f"    {sub}")
+        print(f"[+] Found {crtsh_result['count']} subdomains via crt.sh")
+
+    print()
+
+    # --- Subfinder ---
+    print(f"[*] Running Subfinder for {args.domain}...")
+    subfinder_result = find_subdomains(args.domain)
+
+    if subfinder_result["error"]:
+        print(f"[!] Error: {subfinder_result['error']}")
+    else:
+        print(f"[+] Found {subfinder_result['count']} subdomains via Subfinder")
+
+    print()
+
+    # --- Merge crt.sh and Subfinder results into one deduplicated list ---
+    combined_subdomains = sorted(set(
+        crtsh_result.get("subdomains", []) + subfinder_result.get("subdomains", [])
+    ))
+    print(f"[*] Combined unique subdomains: {len(combined_subdomains)}")
+    for sub in combined_subdomains:
+        print(f"    {sub}")
 
     print()
 
     # --- httpx (live host probing) ---
-    print("[*] Probing discovered subdomains for live hosts...")
-    if crtsh_result["error"] or not crtsh_result["subdomains"]:
+    print("[*] Probing combined subdomain list for live hosts...")
+    if not combined_subdomains:
         httpx_result = {"probed": 0, "live": [], "error": "No subdomains available to probe."}
         print("[!] Skipped: no subdomains to probe.")
     else:
-        httpx_result = probe_hosts(crtsh_result["subdomains"])
+        httpx_result = probe_hosts(combined_subdomains)
         if httpx_result["error"]:
             print(f"[!] Error: {httpx_result['error']}")
         else:
@@ -122,8 +142,8 @@ def main():
     # --- Report Generation ---
     print("[*] Generating consolidated report...")
     report_text = generate_report(
-        args.domain, crtsh_result, wayback_result, ssl_result,
-        dns_result, whois_result, httpx_result
+        args.domain, crtsh_result, subfinder_result, combined_subdomains,
+        wayback_result, ssl_result, dns_result, whois_result, httpx_result
     )
     filepath = save_report(args.domain, report_text)
     print(f"[+] Report saved to: {filepath}")

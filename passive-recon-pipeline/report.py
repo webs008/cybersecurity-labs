@@ -8,7 +8,8 @@ consolidated markdown report to disk.
 from datetime import datetime
 
 
-def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_result: dict,
+def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
+                     combined_subdomains: list, wayback_result: dict, ssl_result: dict,
                      dns_result: dict, whois_result: dict, httpx_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
@@ -24,7 +25,9 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
     # --- Executive Summary ---
     lines.append("## Executive Summary")
     lines.append("")
-    lines.append(f"- Subdomains discovered: {crtsh_result.get('count', 0)}")
+    lines.append(f"- Subdomains (crt.sh): {crtsh_result.get('count', 0)}")
+    lines.append(f"- Subdomains (Subfinder): {subfinder_result.get('count', 0)}")
+    lines.append(f"- Combined unique subdomains: {len(combined_subdomains)}")
 
     if httpx_result.get("error"):
         lines.append("- Live host probing: skipped or failed")
@@ -54,16 +57,13 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
 
     lines.append("")
 
-    # --- crt.sh section ---
-    lines.append("## Subdomains (Certificate Transparency — crt.sh)")
+    # --- Combined subdomains section ---
+    lines.append("## Subdomains (Combined: crt.sh + Subfinder)")
     lines.append("")
-    if crtsh_result.get("error"):
-        lines.append(f"**Error:** {crtsh_result['error']}")
-    else:
-        lines.append(f"Found **{crtsh_result['count']}** subdomains:")
-        lines.append("")
-        for sub in crtsh_result["subdomains"]:
-            lines.append(f"- {sub}")
+    lines.append(f"**{len(combined_subdomains)}** unique subdomains found across both sources:")
+    lines.append("")
+    for sub in combined_subdomains:
+        lines.append(f"- {sub}")
     lines.append("")
 
     # --- httpx section ---
@@ -72,7 +72,7 @@ def generate_report(domain: str, crtsh_result: dict, wayback_result: dict, ssl_r
     if httpx_result.get("error"):
         lines.append(f"**Note:** {httpx_result['error']}")
     else:
-        lines.append(f"Probed **{httpx_result['probed']}** discovered subdomains — "
+        lines.append(f"Probed **{httpx_result['probed']}** combined subdomains — "
                       f"**{len(httpx_result['live'])}** responded as live:")
         lines.append("")
         lines.append("| URL | Status | Title | Server | Technologies |")
