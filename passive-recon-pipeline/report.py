@@ -10,7 +10,8 @@ from datetime import datetime
 
 def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
                      combined_subdomains: list, wayback_result: dict, ssl_result: dict,
-                     dns_result: dict, whois_result: dict, httpx_result: dict, vt_result: dict) -> str:
+                     dns_result: dict, whois_result: dict, httpx_result: dict,
+                     vt_result: dict, harvester_result: dict) -> str:
     """
     Build a markdown-formatted report string from the results of
     each recon module.
@@ -60,6 +61,13 @@ def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
     else:
         lines.append(f"- VirusTotal: {vt_result['malicious']} malicious / "
                       f"{vt_result['suspicious']} suspicious / {vt_result['harmless']} harmless votes")
+
+    if harvester_result.get("error"):
+        lines.append("- theHarvester OSINT: lookup failed")
+    else:
+        lines.append(f"- theHarvester: {len(harvester_result['emails'])} emails, "
+                      f"{len(harvester_result['hosts'])} hosts, "
+                      f"{len(harvester_result['interesting_urls'])} interesting URLs found")
 
     lines.append("")
 
@@ -160,6 +168,33 @@ def generate_report(domain: str, crtsh_result: dict, subfinder_result: dict,
         lines.append(f"- **Suspicious:** {vt_result['suspicious']}")
         lines.append(f"- **Harmless:** {vt_result['harmless']}")
         lines.append(f"- **Reputation score:** {vt_result['reputation']}")
+    lines.append("")
+# --- theHarvester section ---
+    lines.append("## OSINT Gathering (theHarvester)")
+    lines.append("")
+    if harvester_result.get("error"):
+        lines.append(f"**Error:** {harvester_result['error']}")
+    else:
+        lines.append(f"- **Emails found:** {len(harvester_result['emails'])}")
+        lines.append(f"- **Hosts found:** {len(harvester_result['hosts'])}")
+        lines.append(f"- **ASNs found:** {len(harvester_result['asns'])}")
+        lines.append("")
+        if harvester_result["emails"]:
+            lines.append("**Emails:**")
+            for email in harvester_result["emails"]:
+                lines.append(f"- {email}")
+            lines.append("")
+        if harvester_result["asns"]:
+            lines.append("**ASNs:**")
+            for asn in harvester_result["asns"]:
+                lines.append(f"- {asn}")
+            lines.append("")
+        if harvester_result["interesting_urls"]:
+            lines.append(f"**Interesting URLs found:** {len(harvester_result['interesting_urls'])} (showing first 15)")
+            for url in harvester_result["interesting_urls"][:15]:
+                lines.append(f"- {url}")
+            if len(harvester_result["interesting_urls"]) > 15:
+                lines.append(f"- ...and {len(harvester_result['interesting_urls']) - 15} more")
     lines.append("")
 
     return "\n".join(lines)
